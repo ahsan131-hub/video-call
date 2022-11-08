@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+          name="viewport">
+    <meta content="ie=edge" http-equiv="X-UA-Compatible">
+    <title>Video Call App</title>
+    <script crossorigin="anonymous"
+            integrity="sha384-WPFUvHkB1aHA5TDSZi6xtDgkF0wXJcIIxXhC6h8OT8EH3fC5PWro5pWJ1THjcfEi"
+            src="https://cdn.socket.io/4.5.3/socket.io.min.js"></script>
+
+</head>
+
+<body>
+<h1>Video Call App</h1>
+<div>
+    <video autoplay controls height="500px" id="localVideo" muted playsinline width="700px"></video>
+    <video autoplay controls height="500px" id="remoteVideo" playsinline width="700px"></video>
+</div>
+
+<div>
+    <button id="startConn">Start Connection</button>
+    <button id="startVideo">Start Video</button>
+    <button id="stopConn">Stop Connection</button>
+</div>
+<script src="./js/main.js"></script>
+</body>
+</html>
