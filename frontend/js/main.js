@@ -4,53 +4,61 @@ const localVideo = document.getElementById("localVideo")
 const startConnBtn = document.getElementById("startConn")
 const stopConnBtn = document.getElementById("stopConn")
 const startVideoBtn = document.getElementById("startVideo")
-
+const screenShareBtn = document.getElementById("screenShare")
 
 let socket = io.connect('http://localhost:5000')
 let mediaStream = null;
 let remoteStream = null;
 let rtpSender = null;
+let connection1 = null;
 let connection = null;
+let screenStream = null;
 let tracks = []
 
-
+let offer, message, audioTrack, videoTrack;
 let constraint = {
     video: true,
     audio: true
-}, offer, message, answer
+}
 
 socket.on("signal", async (data) => {
     message = JSON.parse(data)
     if (message.rejected) {
         alert("offer is rejected ")
-    }
-    if (message.answer) {
-        //todo
+    } else if (message.answer) {
         console.log("received answer ");
         await connection.setRemoteDescription(new RTCSessionDescription(message.answer));
-    }
-    if (message.offer) {
+    } else if (message.offer) {
+
         console.log("received offer", message.offer)
         if (!connection) {
             await createConnection()
         }
         await connection.setRemoteDescription(new RTCSessionDescription(message.offer))
-        answer = connection.createAnswer()
+        var answer = await connection.createAnswer();
         await connection.setLocalDescription(answer)
 
-        socket.emit("signal", JSON.stringify({"answer": connection.localDescription}))
+        socket.emit("signal", JSON.stringify({answer: connection.localDescription}))
 
+    } else if (message.iceCandidate) {
+        console.log('iceCandidate', message.iceCandidate);
+        if (!connection) {
+            await createConnection();
+        }
+        try {
+            await connection.addIceCandidate(message.iceCandidate);
+        } catch (e) {
+            console.log(e);
+        }
     }
 })
-
-
 let createOffer = async () => {
     offer = await connection.createOffer()
     await connection.setLocalDescription(offer)
     console.log("offer", offer)
     console.log("sdp", connection.localDescription)
     socket.emit("signal", JSON.stringify({"offer": connection.localDescription}))
-}, audioTrack, videoTrack
+}
 
 async function createConnection() {
     connection = new RTCPeerConnection(null)
@@ -59,7 +67,6 @@ async function createConnection() {
         // console.log("onIceCandidateEvent", e.candidate)
         if (e.candidate) socket.emit("signal", JSON.stringify({"iceCandidate": e.candidate}))
     }
-
     connection.onicecandidateerror = ev => {
         // console.log("On ice candidate event error", ev)
     }
@@ -82,14 +89,22 @@ async function createConnection() {
 
     connection.ontrack = ({track, streams}) => {
         console.log("the track is added")
-
         // don't set srcObject again if it is already set.
-        if (remoteVideo.srcObject) return;
-        if (streams.length > 0) {
-            remoteVideo.srcObject = streams[0];
-            console.log("added remote successfully");
-        }
+        if (!remoteStream) remoteStream = new MediaStream()
 
+        // if (streams.length > 0 && !remoteVideo.srcObject) {
+        //     remoteVideo.srcObject = streams[0];
+        //     console.log("added remote successfully");
+        // }
+        if (track.kind === 'video') {
+            remoteStream.getVideoTracks().forEach(t => remoteStream.removeTrack(t));
+        }
+        remoteStream.addTrack(track)
+        remoteVideo.srcObject = null;
+        remoteVideo.srcObject = remoteStream;
+        remoteVideo.load();
+
+        return false
     }
 
 
@@ -99,29 +114,49 @@ startConnBtn.onclick = async (ev) => {
     console.log("started connection")
     await createConnection()
 }
-
-
 startVideoBtn.onclick = async (ev) => {
     console.log("started video")
-    await startVideo()
+    if (connection)
+        await startVideo()
+
+}
+screenShareBtn.onclick = async (ev) => {
+    if (!screenStream) {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+                frameRate: 1
+            }
+        })
+    }
+    try {
+        localVideo.srcObject = null
+        localVideo.srcObject = screenStream
+        if (rtpSender && connection && connection.track)
+            connection.replaceTrack(screenStream.getVideoTracks()[0])
+
+        rtpSender = connection.addTrack(screenStream.getVideoTracks()[0])
+
+
+    } catch (ev) {
+        console.log(ev)
+    }
 
 }
 
 const startVideo = async () => {
-//    get video streams from camera and display it on local video
     let currtrack = null;
-    if (startVideoBtn.innerText === "stop video") {
-        console.log('Ending call');
-        // connection.close();
-        // connection = null
-        const videoTracks = mediaStream.getVideoTracks();
-        videoTracks.forEach(videoTrack => {
-            videoTrack.stop();
-            mediaStream.removeTrack(videoTrack);
-        });
+    if (videoTrack) {
+        videoTrack.stop();
+        videoTrack = null;
         localVideo.srcObject = null;
-        localVideo.srcObject = mediaStream;
-        return
+        startVideoBtn.innerText = "start video";
+
+
+        if (rtpSender && connection) {
+            connection.removeTrack(_rtpSender);
+            _rtpSender = null;
+        }
+        return;
     }
     try {
         mediaStream = await navigator.mediaDevices.getUserMedia(constraint)
@@ -129,18 +164,11 @@ const startVideo = async () => {
         audioTrack = (mediaStream.getAudioTracks()[0])
         videoTrack = (mediaStream.getVideoTracks()[0])
         currtrack = videoTrack
-        startVideoBtn.innerText = startVideoBtn.innerText === "stop video" ? "start video" : "stop video"
+        startVideoBtn.innerText = "stop video"
 
         mediaStream.getTracks().forEach(track => {
-            connection.addTrack(track, mediaStream);
+            rtpSender = connection.addTrack(track, mediaStream);
         });
-
-        // if (rtpSender && rtpSender.track && currtrack && connection) {
-        //     await rtpSender.replaceTrack(currtrack);
-        // } else {
-        //     if (currtrack && connection)
-        //         rtpSender = connection.addTrack(currtrack);
-        // }
     } catch (e) {
         console.log("could not get media streams", e)
 

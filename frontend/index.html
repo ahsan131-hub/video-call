@@ -15,15 +15,23 @@
 <body>
 <h1>Video Call App</h1>
 <div>
-    <video autoplay controls height="500px" id="localVideo" muted playsinline width="700px"></video>
-    <video autoplay controls height="500px" id="remoteVideo" playsinline width="700px"></video>
+    <video autoplay controls height="300px" id="localVideo" muted playsinline width="400px"></video>
+    <video autoplay controls height="300px" id="remoteVideo" playsinline width="400px"></video>
 </div>
 
 <div>
     <button id="startConn">Start Connection</button>
     <button id="startVideo">Start Video</button>
     <button id="stopConn">Stop Connection</button>
+
+
+    <button id="screenShare">Share Screen</button>
+
 </div>
+<script crossorigin="anonymous"
+        integrity="sha512-r8cn1OoZ21KHc0zmav3+MtQS24AJLAaDdNNWYkOborAznLETtfBKMb6xkpqXnjcH1GmKG9BqPOW9tU/Jzy98kQ=="
+        referrerpolicy="no-referrer"
+        src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/6.1.4/adapter.js"></script>
 <script src="./js/main.js"></script>
 </body>
 </html>
